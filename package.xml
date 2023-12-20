@@ -15,15 +15,19 @@
   <url type="website">http://github.com/anybotics/point_cloud_io</url>
   <url type="bugtracker">http://github.com/anybotics/point_cloud_io/issues</url>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
 <!--   <build_depend>cmake_clang_tools</build_depend> -->
 
-  <depend>roscpp</depend>
+  <!-- TODO remove <depend>roscpp</depend> -->
+  <depend>rclcpp</depend>
   <depend>pcl_ros</depend>
   <depend>sensor_msgs</depend>
 
 <!--   <test_depend>cmake_code_coverage</test_depend> -->
   <test_depend>gtest</test_depend>
 
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>

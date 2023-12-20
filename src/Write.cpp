@@ -17,28 +17,44 @@
 
 namespace point_cloud_io {
 
-Write::Write(ros::NodeHandle nodeHandle) : nodeHandle_(std::move(nodeHandle)), filePrefix_("point_cloud"), fileEnding_("ply") {
+Write::Write() :
+  rclcpp::Node("mesh_saver"),
+  filePrefix_("point_cloud"), fileEnding_("ply")
+{
   if (!readParameters()) {
-    ros::requestShutdown();
+    rclcpp::shutdown();
   }
-  pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &Write::pointCloudCallback, this);
-  ROS_INFO_STREAM("Subscribed to topic \"" << pointCloudTopic_ << "\".");
+  using std::placeholders::_1;
+  pointCloudSubscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+    pointCloudTopic_, rclcpp::QoS(1), std::bind(&Write::pointCloudCallback, this, _1) );
+  RCLCPP_INFO_STREAM(this->get_logger(), "Subscribed to topic \"" << pointCloudTopic_ << "\".");
 }
 
 bool Write::readParameters() {
-  bool allParametersRead = true;
-  allParametersRead = nodeHandle_.getParam("topic", pointCloudTopic_) && allParametersRead;
-  allParametersRead = nodeHandle_.getParam("folder_path", folderPath_) && allParametersRead;
+  // essential parameters
+  this->declare_parameter("topic", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("folder_path", rclcpp::PARAMETER_STRING);
 
-  nodeHandle_.getParam("file_prefix", filePrefix_);
-  nodeHandle_.getParam("file_ending", fileEnding_);
-  nodeHandle_.getParam("add_counter_to_path", addCounterToPath_);
-  nodeHandle_.getParam("add_frame_id_to_path", addFrameIdToPath_);
-  nodeHandle_.getParam("add_stamp_sec_to_path", addStampSecToPath_);
-  nodeHandle_.getParam("add_stamp_nsec_to_path", addStampNSecToPath_);
+  this->declare_parameter("file_prefix", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("file_ending", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("add_counter_to_path", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("add_frame_id_to_path", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("add_stamp_sec_to_path", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("add_stamp_nsec_to_path", rclcpp::PARAMETER_STRING);
+
+  bool allParametersRead = true;
+  allParametersRead = this->get_parameter("topic", pointCloudTopic_) && allParametersRead;
+  allParametersRead = this->get_parameter("folder_path", folderPath_) && allParametersRead;
+
+  this->get_parameter("file_prefix", filePrefix_);
+  this->get_parameter("file_ending", fileEnding_);
+  this->get_parameter("add_counter_to_path", addCounterToPath_);
+  this->get_parameter("add_frame_id_to_path", addFrameIdToPath_);
+  this->get_parameter("add_stamp_sec_to_path", addStampSecToPath_);
+  this->get_parameter("add_stamp_nsec_to_path", addStampNSecToPath_);
 
   if (!allParametersRead) {
-    ROS_WARN(
+    RCLCPP_WARN( this->get_logger(),
         "Could not read all parameters. Typical command-line usage:\n"
         "rosrun point_cloud_io write"
         " _topic:=/my_topic"
@@ -55,8 +71,8 @@ bool Write::readParameters() {
   return true;
 }
 
-void Write::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud) {
-  ROS_INFO_STREAM("Received point cloud with " << cloud->height * cloud->width << " points.");
+void Write::pointCloudCallback(const sensor_msgs::msg::PointCloud2& cloud) {
+  RCLCPP_INFO_STREAM(this->get_logger(), "Received point cloud with " << cloud.height * cloud.width << " points.");
   std::cout << folderPath_ << std::endl;
   std::stringstream filePath;
   filePath << folderPath_ << "/";
@@ -68,13 +84,13 @@ void Write::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud) {
     counter_++;
   }
   if (addFrameIdToPath_) {
-    filePath << "_" << cloud->header.frame_id;
+    filePath << "_" << cloud.header.frame_id;
   }
   if (addStampSecToPath_) {
-    filePath << "_" << cloud->header.stamp.sec;
+    filePath << "_" << cloud.header.stamp.sec;
   }
   if (addStampNSecToPath_) {
-    filePath << "_" << cloud->header.stamp.nsec;
+    filePath << "_" << cloud.header.stamp.nanosec;
   }
   filePath << ".";
   filePath << fileEnding_;
@@ -82,26 +98,26 @@ void Write::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud) {
   if (fileEnding_ == "ply") {
     // Write .ply file.
     pcl::PointCloud<pcl::PointXYZRGBNormal> pclCloud;
-    pcl::fromROSMsg(*cloud, pclCloud);
+    pcl::fromROSMsg(cloud, pclCloud);
 
     pcl::PLYWriter writer;
     bool binary = false;
     bool use_camera = false;
     if (writer.write(filePath.str(), pclCloud, binary, use_camera) != 0) {
-      ROS_ERROR("Something went wrong when trying to write the point cloud file.");
+      RCLCPP_ERROR(this->get_logger(), "Something went wrong when trying to write the point cloud file.");
       return;
     }
   } else if (fileEnding_ == "pcd") {
     // Write pcd file
     pcl::PointCloud<pcl::PointXYZRGBNormal> pclCloud;
-    pcl::fromROSMsg(*cloud, pclCloud);
+    pcl::fromROSMsg(cloud, pclCloud);
     pcl::io::savePCDFile(filePath.str(), pclCloud);
   } else {
-    ROS_ERROR_STREAM("Data format not supported.");
+    RCLCPP_ERROR_STREAM(this->get_logger(), "Data format not supported.");
     return;
   }
 
-  ROS_INFO_STREAM("Saved point cloud to " << filePath.str() << ".");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Saved point cloud to " << filePath.str() << ".");
 }
 
 }  // namespace point_cloud_io

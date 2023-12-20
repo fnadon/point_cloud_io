@@ -12,23 +12,13 @@ if(BUILD_WITH_VTK_SUPPORT)
   add_definitions(-DHAVE_VTK)
 endif()
 
-set(CATKIN_PACKAGE_DEPENDENCIES
-  pcl_ros
-  roscpp
-  sensor_msgs
-)
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(pcl_ros REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
-find_package(catkin REQUIRED
-  COMPONENTS
-    ${CATKIN_PACKAGE_DEPENDENCIES}
-)
-
-catkin_package(
-  INCLUDE_DIRS
-    include
-  CATKIN_DEPENDS
-    ${CATKIN_PACKAGE_DEPENDENCIES}
-)
+ament_export_dependencies(pcl_ros rclcpp sensor_msgs)
+ament_export_include_directories(include)
 
 include_directories(
   include
@@ -43,17 +33,14 @@ add_executable(read
   src/read_node.cpp
   src/Read.cpp
 )
-target_link_libraries(read
-  ${catkin_LIBRARIES}
-)
+ament_target_dependencies(read rclcpp pcl_ros sensor_msgs)
 
 add_executable(write
   src/write_node.cpp
   src/Write.cpp
 )
-target_link_libraries(write
-  ${catkin_LIBRARIES}
-)
+ament_target_dependencies(write rclcpp pcl_ros sensor_msgs)
+
 
 #############
 ## Install ##
@@ -62,20 +49,18 @@ install(
   TARGETS
     read
     write
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  DESTINATION lib/${PROJECT_NAME}
 )
 install(
-  DIRECTORY
-    include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  DIRECTORY include/
+  DESTINATION include
 )
+ament_export_include_directories(include)
 install(
   DIRECTORY
     examples
     launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  DESTINATION share/${PROJECT_NAME}
 )
 
 find_package(cmake_clang_tools QUIET)
@@ -120,3 +105,6 @@ if(CATKIN_ENABLE_TESTING)
     )
   endif()
 endif()
+
+
+ament_package()

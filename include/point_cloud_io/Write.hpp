@@ -8,19 +8,19 @@
 
 #pragma once
 
-// ROS
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
+// ROS2
+#include "rclcpp/rclcpp.hpp"
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace point_cloud_io {
 
-class Write {
+class Write : public rclcpp::Node {
  public:
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
    */
-  explicit Write(ros::NodeHandle nodeHandle);
+  explicit Write();
 
   /*!
    * Destructor.
@@ -38,13 +38,14 @@ class Write {
    * Point cloud callback function
    * @param cloud point cloud message.
    */
-  void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud);
+  void pointCloudCallback(const sensor_msgs::msg::PointCloud2& cloud);
 
   //! ROS node handle.
-  ros::NodeHandle nodeHandle_;
+  //TODO remove ros::NodeHandle nodeHandle_;
 
   //! Point cloud subscriber.
-  ros::Subscriber pointCloudSubscriber_;
+  //TODO remove ros::Subscriber pointCloudSubscriber_;
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointCloudSubscriber_;
 
   //! Point cloud topic to subscribe to.
   std::string pointCloudTopic_;

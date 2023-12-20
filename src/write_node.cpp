@@ -6,15 +6,12 @@
  *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 #include "point_cloud_io/Write.hpp"
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "write");
-  ros::NodeHandle nodeHandle("~");
-
-  point_cloud_io::Write write(nodeHandle);
-
-  ros::spin();
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<point_cloud_io::Write>());
+  rclcpp::shutdown();
   return 0;
 }
