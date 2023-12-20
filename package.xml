@@ -11,6 +11,7 @@
   <author email="rdiethelm@anybotics.com">Remo Diethelm</author>
   <maintainer email="rdiethelm@anybotics.com">Remo Diethelm</maintainer>
   <maintainer email="ynava@anybotics.com">Yoshua Nava</maintainer>
+  <maintainer email="EWING_KANG@glorymakeup.com">Ewing Kang</maintainer>
 
   <url type="website">http://github.com/anybotics/point_cloud_io</url>
   <url type="bugtracker">http://github.com/anybotics/point_cloud_io/issues</url>
@@ -19,7 +20,6 @@
 
 <!--   <build_depend>cmake_clang_tools</build_depend> -->
 
-  <!-- TODO remove <depend>roscpp</depend> -->
   <depend>rclcpp</depend>
   <depend>pcl_ros</depend>
   <depend>sensor_msgs</depend>

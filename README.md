@@ -4,15 +4,16 @@ Point Cloud IO
 Overview
 ---------------
 
-These are two simple [ROS] point cloud helper nodes. **_read_** reads a point cloud from file (ply or vtk) and publishes it as a [sensor_msgs/PointCloud2] message. **_write_** subscribes to a [sensor_msgs/PointCloud2] topic and writes received messages to seperate files (ply, pcd).
+These are two simple [ROS2] point cloud helper nodes. **_read_** reads a point cloud from file (ply or vtk) and publishes it as a [sensor_msgs/msg/PointCloud2] message. **_write_** subscribes to a [sensor_msgs/msg/PointCloud2] topic and writes received messages to seperate files (ply, pcd).
 
-For visualization, make sure to set the **Decay Time** in the **PointCloud2** tab in [rviz] to a high number to get the point cloud visible for a long time.
+For visualization, make sure to set the **Decay Time** in the **PointCloud2** tab in [rviz2] to a high number to get the point cloud visible for a long time.
 
 This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 **Author: Péter Fankhauser, Remo Diethelm<br />
 Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
-Maintainer: Remo Diethelm, rdiethelm@anybotics.com<br />**
+Maintainer: Remo Diethelm, rdiethelm@anybotics.com<br />
+ROS2 adaptation: Ewing Kang f039281310@yahoo.com.tw<br />**
 
 This projected was initially developed at ETH Zurich (Autonomous Systems Lab & Robotic Systems Lab).
 
@@ -25,7 +26,7 @@ Installation
 
 ### Dependencies
 
-This software is built on the Robot Operating System ([ROS]), which needs to be [installed](http://wiki.ros.org) first. Additionaly, the it depends on following software:
+This software is built on the Robot Operating System ([ROS2]), which needs to be [installed](https://docs.ros.org/en/) first. Additionaly, the it depends on following software:
 
 - [Point Cloud Library (PCL)](http://pointclouds.org/).
 
@@ -34,12 +35,12 @@ This software is built on the Robot Operating System ([ROS]), which needs to be 
 
 In order to build Point Cloud IO, clone the latest version from this repository into your catkin workspace and compile the package using ROS.
 
-    cd ~/catkin_workspace/src
-    git clone https://github.com/anybotics/point_cloud_io.git
+    cd ~/ros2/src
+    git clone -b ros2_iron https://github.com/anybotics/point_cloud_io.git
     cd ../
-    catkin build point_cloud_io
+    colcon build  --packages-select point_cloud_io
 
-Note: building the tool with support for the VTK file format is disabled by default. To enable it, run `catkin build point_cloud_io --cmake-args -DBUILD_WITH_VTK_SUPPORT=True` instead.
+Note: building the tool with support for the VTK file format is disabled by default. To enable it, run `colcon build --packages-select point_cloud_io --cmake-args -DBUILD_WITH_VTK_SUPPORT=True` instead.
 
 Usage
 ------------
@@ -51,25 +52,26 @@ To create your own launch-file, you can use the examples from `point_cloud_io/la
 
 Load and publish a ply or vtk file with
 
-    rosrun point_cloud_io read _file_path:=/home/user/my_point_cloud.ply _topic:=/my_topic _frame:=/sensor_frame
+    ros2 run point_cloud_io read --ros-args -p file_path:=/home/user/my_point_cloud.ply -p topic:=/my_topic -p frame:=/sensor_frame
 
-Optionally, you can also add `_rate:=1.0` to have the node publish your point cloud at the specified rate.
+Optionally, you can also add `-p rate:=1.0` to have the node publish your point cloud at the specified rate.
+Optionally, you can also add `-p scale:=0.01` to uniformly scale your model.
 
 
 ### Write
 
 Subscribe and save point clouds to a ply file with
 
-    rosrun point_cloud_io write _topic:=/your_topic _folder_path:=/home/user/my_point_clouds
+    rosrun point_cloud_io write  --ros-args -p topic:=/your_topic -p folder_path:=/home/user/my_point_clouds
 
 Optionally, you can set parameters to fit the point cloud file names to your needs:
 
-- `_file_prefix:=my_prefix` (default: "point_cloud")
-- `_file_ending:=my_ending` (default: "ply", currently only format which is supported for writing)
-- `_add_counter_to_path:=false` (default: `true`)
-- `_add_frame_id_to_path:=true` (default: `false`)
-- `_add_stamp_sec_to_path:=true` (default: `false`)
-- `_add_stamp_nsec_to_path:=true` (default: `false`)
+- `-p file_prefix:=my_prefix` (default: "point_cloud")
+- `-p file_ending:=my_ending` (default: "ply", currently only format which is supported for writing)
+- `-p add_counter_to_path:=false` (default: `true`)
+- `-p add_frame_id_to_path:=true` (default: `false`)
+- `-p add_stamp_sec_to_path:=true` (default: `false`)
+- `-p add_stamp_nsec_to_path:=true` (default: `false`)
 
 
 Bugs & Feature Requests
@@ -79,5 +81,5 @@ Please report bugs and request features using the [Issue Tracker](https://github
 
 
 [ROS]: http://www.ros.org
-[rviz]: http://wiki.ros.org/rviz
-[sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
+[rviz]: https://index.ros.org/p/rviz2
+[sensor_msgs/PointCloud2]: https://docs.ros2.org/latest/api/sensor_msgs/msg/PointCloud2.html
