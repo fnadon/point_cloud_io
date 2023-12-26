@@ -11,6 +11,7 @@
 // ROS2
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <shape_msgs/msg/mesh.hpp>
 
 namespace point_cloud_io {
 
@@ -64,9 +65,11 @@ class Read : public rclcpp::Node {
   //! Point cloud message to publish.
   //sensor_msgs::PointCloud2::Ptr pointCloudMessage_;
   sensor_msgs::msg::PointCloud2::SharedPtr pointCloudMessage_;
+  shape_msgs::msg::Mesh::SharedPtr meshMessage_;
 
   //! Point cloud publisher.
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointCloudPublisher_;
+  rclcpp::Publisher<shape_msgs::msg::Mesh>::SharedPtr meshPublisher_;
 
   //! Timer for publishing the point cloud.
   //ros::Timer timer_;
@@ -77,6 +80,9 @@ class Read : public rclcpp::Node {
 
   //! Point cloud topic to be published at.
   std::string pointCloudTopic_;
+
+  //! Mesh topic to be published at. Only published if it's non-empty
+  std::string meshTopic_;
 
   //! Point cloud frame id.
   std::string pointCloudFrameId_;
@@ -90,8 +96,10 @@ class Read : public rclcpp::Node {
    */
   bool isContinuouslyPublishing_ = false;
 
+
   //! Duration between publishing steps.
   std::chrono::microseconds updateDuration_;
+
 };
 
 }  // namespace point_cloud_io

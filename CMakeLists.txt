@@ -16,8 +16,9 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(shape_msgs REQUIRED)
 
-ament_export_dependencies(pcl_ros rclcpp sensor_msgs)
+ament_export_dependencies(pcl_ros rclcpp sensor_msgs shape_msgs)
 ament_export_include_directories(include)
 
 include_directories(
@@ -33,7 +34,7 @@ add_executable(read
   src/read_node.cpp
   src/Read.cpp
 )
-ament_target_dependencies(read rclcpp pcl_ros sensor_msgs)
+ament_target_dependencies(read rclcpp pcl_ros sensor_msgs shape_msgs)
 
 add_executable(write
   src/write_node.cpp

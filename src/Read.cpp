@@ -20,7 +20,71 @@
 #include <pcl/io/vtk_lib_io.h>
 #endif
 
+
 namespace point_cloud_io {
+
+bool pclToRclcpp(const pcl::PolygonMesh &pclmesh, shape_msgs::msg::Mesh::SharedPtr & msg, rclcpp::Logger logger)
+{
+  msg = std::make_shared<shape_msgs::msg::Mesh>();
+  msg->vertices.resize(pclmesh.cloud.height*pclmesh.cloud.width);
+
+  /*DEBUG std::cout << "height: " << pclmesh.cloud.height
+  << ", width: " << pclmesh.cloud.width
+  << ", point_step: " << pclmesh.cloud.point_step
+  << ", row_step: " << pclmesh.cloud.row_step
+  << ", is_dense: " << (int)pclmesh.cloud.is_dense << std::endl;*/
+  size_t x_offset, y_offset, z_offset, stride = pclmesh.cloud.point_step;
+
+  // Usually the fields have size 4 and contains "x", "y", "z", "rgb" from a ply file
+  bool type_error = false;
+  for(size_t i=0; i< pclmesh.cloud.fields.size(); i++)
+  {
+    /*DEBUG std::cout << "field: " << pclmesh.cloud.fields[i].name
+    << ", offset: " << pclmesh.cloud.fields[i].offset
+    << ", dtype: " << (pcl::PCLPointField::PointFieldTypes)pclmesh.cloud.fields[i].datatype
+    << ", count: " << pclmesh.cloud.fields[i].count << std::endl;*/
+    if(pclmesh.cloud.fields[i].name == "x")
+    {
+      x_offset = pclmesh.cloud.fields[i].offset;
+      type_error |= pclmesh.cloud.fields[i].datatype != pcl::PCLPointField::PointFieldTypes::FLOAT32;
+    }
+    if(pclmesh.cloud.fields[i].name == "y")
+    {
+      y_offset = pclmesh.cloud.fields[i].offset;
+      type_error |= pclmesh.cloud.fields[i].datatype != pcl::PCLPointField::PointFieldTypes::FLOAT32;
+    }
+    if(pclmesh.cloud.fields[i].name == "z")
+    {
+      z_offset = pclmesh.cloud.fields[i].offset;
+      type_error |= pclmesh.cloud.fields[i].datatype != pcl::PCLPointField::PointFieldTypes::FLOAT32;
+    }
+  }
+  if(type_error)
+  {
+    RCLCPP_ERROR(logger,"Only support FLOAT32 format.");
+    return false;
+  }
+  /*std::cout << "xyz: " << x_offset << ", " << y_offset << ", " << z_offset << ", " << std::endl;*/
+  for(size_t i=0; i<msg->vertices.size(); i++)
+  {
+    msg->vertices[i].x = static_cast<double>((*reinterpret_cast<const float*>(&pclmesh.cloud.data[stride*i + x_offset])));
+    msg->vertices[i].y = static_cast<double>((*reinterpret_cast<const float*>(&pclmesh.cloud.data[stride*i + y_offset])));
+    msg->vertices[i].z = static_cast<double>((*reinterpret_cast<const float*>(&pclmesh.cloud.data[stride*i + z_offset])));
+  }
+
+  msg->triangles.resize( pclmesh.polygons.size() );
+  for(size_t i=0; i<msg->triangles.size(); i++)
+  {
+    if(pclmesh.polygons[i].vertices.size() != 3)
+    {
+      RCLCPP_ERROR(logger,"Detecting non-triangel primatives");
+    }
+    msg->triangles[i].vertex_indices[0] = pclmesh.polygons[i].vertices[0];
+    msg->triangles[i].vertex_indices[1] = pclmesh.polygons[i].vertices[1];
+    msg->triangles[i].vertex_indices[2] = pclmesh.polygons[i].vertices[2];
+  }
+  return true;
+}
 
 Read::Read() :
   rclcpp::Node("mesh_publisher"),
@@ -31,7 +95,14 @@ Read::Read() :
     rclcpp::shutdown();
   }
 
-  pointCloudPublisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(pointCloudTopic_, rclcpp::QoS(1));
+  pointCloudPublisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+    pointCloudTopic_, rclcpp::QoS(1));
+
+  if(!meshTopic_.empty())
+  {
+    meshPublisher_ = this->create_publisher<shape_msgs::msg::Mesh>(
+      meshTopic_, rclcpp::QoS(1));
+  }
   initialize();
 }
 
@@ -41,6 +112,7 @@ bool Read::readParameters() {
   this->declare_parameter("frame_id", rclcpp::PARAMETER_STRING);
   this->declare_parameter("rate", rclcpp::PARAMETER_DOUBLE);
   this->declare_parameter("scale", rclcpp::PARAMETER_DOUBLE);
+  this->declare_parameter("mesh_topic", rclcpp::PARAMETER_STRING);
 
   std::vector<rclcpp::Parameter> params;
   // throws exception if not found
@@ -66,6 +138,7 @@ bool Read::readParameters() {
   this->get_parameter("scale", scale_param);
   scale_ = scale_param.as_double();
 
+  this->get_parameter("mesh_topic", meshTopic_);
 
   return true;
 }
@@ -128,6 +201,19 @@ bool Read::readFile(const std::string& filePath, const std::string& pointCloudFr
   pointCloudMessage_->header.frame_id = pointCloudFrameId;
 
   RCLCPP_INFO_STREAM(this->get_logger(),"Loaded point cloud with " << pointCloudMessage_->height * pointCloudMessage_->width << " points.");
+
+  if(!meshTopic_.empty())
+  {
+    pcl::PolygonMesh polygonMesh;
+    if( pcl::io::loadPLYFile(filePath, polygonMesh) !=0) {
+      return false;
+    }
+
+    bool res = pclToRclcpp(polygonMesh, meshMessage_, this->get_logger());
+    if( !res ) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -142,6 +228,10 @@ bool Read::publish() {
   if (pointCloudPublisher_->get_subscription_count() > 0u) {
     pointCloudPublisher_->publish(*pointCloudMessage_);
     RCLCPP_DEBUG_STREAM(this->get_logger(),"Point cloud published to topic \"" << pointCloudTopic_ << "\".");
+  }
+  if( meshPublisher_ && meshPublisher_->get_subscription_count() > 0u) {
+    meshPublisher_->publish(*meshMessage_);
+    RCLCPP_DEBUG_STREAM(this->get_logger(),"Mesh published to topic \"" << meshTopic_ << "\".");
   }
   return true;
 }
