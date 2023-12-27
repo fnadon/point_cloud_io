@@ -90,6 +90,9 @@ class Read : public rclcpp::Node {
   //! Scale for the mesh file.
   double scale_;
 
+  //! Rotation for the mesh file
+  std::vector<double> ypr_ = {0, 0, 0};
+
   /*!
    * If true, continuous publishing is used.
    * If false, point cloud is only published once.

@@ -15,6 +15,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/common/transforms.h>
+
+#include <pcl_ros/transforms.hpp>
 
 #ifdef HAVE_VTK
 #include <pcl/io/vtk_lib_io.h>
@@ -107,12 +110,14 @@ Read::Read() :
 }
 
 bool Read::readParameters() {
+
   this->declare_parameter("file_path", rclcpp::PARAMETER_STRING);
   this->declare_parameter("topic", rclcpp::PARAMETER_STRING);
   this->declare_parameter("frame_id", rclcpp::PARAMETER_STRING);
   this->declare_parameter("rate", rclcpp::PARAMETER_DOUBLE);
   this->declare_parameter("scale", rclcpp::PARAMETER_DOUBLE);
   this->declare_parameter("mesh_topic", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("rpy_deg", ypr_);
 
   std::vector<rclcpp::Parameter> params;
   // throws exception if not found
@@ -127,7 +132,7 @@ bool Read::readParameters() {
   double updateRate = rate_param.as_double();
   RCLCPP_INFO(this->get_logger(), "Rate: %f", updateRate);
   if (updateRate <= 0.0) {
-    isContinuouslyPublishing_ = false;
+    isContinuouslyPublishing_ = false; // TODO: this is broken in ROS2
   } else {
     isContinuouslyPublishing_ = true;
     updateDuration_ = std::chrono::microseconds((long int)(1000000.0 / updateRate) );
@@ -139,6 +144,8 @@ bool Read::readParameters() {
   scale_ = scale_param.as_double();
 
   this->get_parameter("mesh_topic", meshTopic_);
+
+  this->get_parameter("rpy_deg", ypr_);
 
   return true;
 }
@@ -171,14 +178,6 @@ bool Read::readFile(const std::string& filePath, const std::string& pointCloudFr
     if (pcl::io::loadPLYFile(filePath, pointCloud) != 0) {
       return false;
     }
-    for( auto & pt : pointCloud.points)
-    {
-      pt.x *= scale_;
-      pt.y *= scale_;
-      pt.z *= scale_;
-    }
-    RCLCPP_INFO(this->get_logger(),"Set scale to: %f", scale_);
-
 
     // Define PointCloud2 message.
     pcl::toROSMsg(pointCloud, *pointCloudMessage_);
@@ -199,8 +198,17 @@ bool Read::readFile(const std::string& filePath, const std::string& pointCloudFr
   }
 
   pointCloudMessage_->header.frame_id = pointCloudFrameId;
+  RCLCPP_INFO(this->get_logger(),"Set scale to: %f", scale_);
+  RCLCPP_INFO(this->get_logger(),"Set eular ypr to: [%f, %f, %f]", ypr_[0], ypr_[1], ypr_[2]);
+  Eigen::Affine3d tf = Eigen::Affine3d::Identity();
+  const double TO_RAD = EIGEN_PI/180.0;
+  tf = Eigen::AngleAxisd(ypr_[0]*TO_RAD, Eigen::Vector3d::UnitX())
+  * Eigen::AngleAxisd(ypr_[1]*TO_RAD, Eigen::Vector3d::UnitY())
+  * Eigen::AngleAxisd(ypr_[2]*TO_RAD, Eigen::Vector3d::UnitZ());
+  tf.scale(scale_);
+  pcl_ros::transformPointCloud(tf.cast<float>().matrix(), *pointCloudMessage_, *pointCloudMessage_);
 
-  RCLCPP_INFO_STREAM(this->get_logger(),"Loaded point cloud with " << pointCloudMessage_->height * pointCloudMessage_->width << " points.");
+  RCLCPP_INFO_STREAM(this->get_logger(),"Loaded point cloud msg with " << pointCloudMessage_->height * pointCloudMessage_->width << " points.");
 
   if(!meshTopic_.empty())
   {
@@ -208,8 +216,13 @@ bool Read::readFile(const std::string& filePath, const std::string& pointCloudFr
     if( pcl::io::loadPLYFile(filePath, polygonMesh) !=0) {
       return false;
     }
+    pcl::PointCloud<pcl::PointXYZRGB> pointCloud;
+    pcl::fromPCLPointCloud2(polygonMesh.cloud, pointCloud);
+    pcl::transformPointCloud(pointCloud, pointCloud, tf);
+    pcl::toPCLPointCloud2(pointCloud, polygonMesh.cloud);
 
     bool res = pclToRclcpp(polygonMesh, meshMessage_, this->get_logger());
+    RCLCPP_INFO_STREAM(this->get_logger(),"Loaded mesh msg with " << meshMessage_->vertices.size() << " points.");
     if( !res ) {
       return false;
     }
