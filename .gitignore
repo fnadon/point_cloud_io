@@ -24,6 +24,8 @@
 .cproject
 .project
 .settings
+.vscode/
 
 # Files written by the example
 examples/received_cloud_*
+build/

@@ -62,6 +62,10 @@ class Write : public rclcpp::Node {
   //! Point cloud counter.
   unsigned int counter_ = 0;
 
+  //! divisor for limiting writes
+  int div_;
+  int div_counter = 0;
+
   //! Settings for generating file name.
   bool addCounterToPath_ = true;
   bool addFrameIdToPath_ = false;

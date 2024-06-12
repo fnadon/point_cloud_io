@@ -41,6 +41,10 @@ bool Write::readParameters() {
   this->declare_parameter("add_frame_id_to_path", rclcpp::PARAMETER_STRING);
   this->declare_parameter("add_stamp_sec_to_path", rclcpp::PARAMETER_STRING);
   this->declare_parameter("add_stamp_nsec_to_path", rclcpp::PARAMETER_STRING);
+  auto div_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  div_descriptor.description = "Save only the nth point cloud recieved, starting at 0.";
+  // this->declare_parameter<unsigned int>("n", div_descriptor);
+  this->declare_parameter("n", rclcpp::PARAMETER_INTEGER, div_descriptor);
 
   bool allParametersRead = true;
   allParametersRead = this->get_parameter("topic", pointCloudTopic_) && allParametersRead;
@@ -52,6 +56,7 @@ bool Write::readParameters() {
   this->get_parameter("add_frame_id_to_path", addFrameIdToPath_);
   this->get_parameter("add_stamp_sec_to_path", addStampSecToPath_);
   this->get_parameter("add_stamp_nsec_to_path", addStampNSecToPath_);
+  this->get_parameter("n", div_);
 
   if (!allParametersRead) {
     RCLCPP_WARN( this->get_logger(),
@@ -64,7 +69,8 @@ bool Write::readParameters() {
         " _add_counter_to_path:=true/false"
         " _add_frame_id_to_path:=true/false"
         " _add_stamp_sec_to_path:=true/false"
-        " _add_stamp_nsec_to_path:=true/false)");
+        " _add_stamp_nsec_to_path:=true/false"
+        " _n:=number)");
     return false;
   }
 
@@ -72,6 +78,13 @@ bool Write::readParameters() {
 }
 
 void Write::pointCloudCallback(const sensor_msgs::msg::PointCloud2& cloud) {
+  // check if we write this one or wait.
+  if(div_counter == div_){
+    div_counter = 0;
+  }else{
+    div_counter++;
+    return;
+  }
   RCLCPP_INFO_STREAM(this->get_logger(), "Received point cloud with " << cloud.height * cloud.width << " points.");
   std::cout << folderPath_ << std::endl;
   std::stringstream filePath;
