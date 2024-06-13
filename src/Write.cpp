@@ -14,6 +14,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <filesystem>
 
 namespace point_cloud_io {
 
@@ -73,6 +74,8 @@ bool Write::readParameters() {
         " _n:=number)");
     return false;
   }
+  // create output directory if it doesn't exist.
+  std::filesystem::create_directories(folderPath_);
 
   return true;
 }
