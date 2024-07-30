@@ -38,10 +38,10 @@ bool Write::readParameters() {
 
   this->declare_parameter("file_prefix", rclcpp::PARAMETER_STRING);
   this->declare_parameter("file_ending", rclcpp::PARAMETER_STRING);
-  this->declare_parameter("add_counter_to_path", rclcpp::PARAMETER_STRING);
-  this->declare_parameter("add_frame_id_to_path", rclcpp::PARAMETER_STRING);
-  this->declare_parameter("add_stamp_sec_to_path", rclcpp::PARAMETER_STRING);
-  this->declare_parameter("add_stamp_nsec_to_path", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("add_counter_to_path", rclcpp::PARAMETER_BOOL);
+  this->declare_parameter("add_frame_id_to_path", rclcpp::PARAMETER_BOOL);
+  this->declare_parameter("add_stamp_sec_to_path", rclcpp::PARAMETER_BOOL);
+  this->declare_parameter("add_stamp_nsec_to_path", rclcpp::PARAMETER_BOOL);
   auto div_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
   div_descriptor.description = "Save only the nth point cloud recieved, starting at 0.";
   // this->declare_parameter<unsigned int>("n", div_descriptor);
@@ -88,7 +88,7 @@ void Write::pointCloudCallback(const sensor_msgs::msg::PointCloud2& cloud) {
     div_counter++;
     return;
   }
-  RCLCPP_INFO_STREAM(this->get_logger(), "Received point cloud with " << cloud.height * cloud.width << " points.");
+  RCLCPP_DEBUG_STREAM(this->get_logger(), "Received point cloud with " << cloud.height * cloud.width << " points.");
   std::cout << folderPath_ << std::endl;
   std::stringstream filePath;
   filePath << folderPath_ << "/";
@@ -133,7 +133,7 @@ void Write::pointCloudCallback(const sensor_msgs::msg::PointCloud2& cloud) {
     return;
   }
 
-  RCLCPP_INFO_STREAM(this->get_logger(), "Saved point cloud to " << filePath.str() << ".");
+  RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Saved point cloud to " << filePath.str() << ".");
 }
 
 }  // namespace point_cloud_io
